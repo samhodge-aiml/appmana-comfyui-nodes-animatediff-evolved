@@ -1,4 +1,4 @@
-from cmd.client import folder_paths
+from  comfy.cmd import folder_paths
 from .animatediff.logger import logger
 from .animatediff.utils_model import get_available_motion_models, Folders
 from .animatediff.model_injection import prepare_dinklink_register_definitions
