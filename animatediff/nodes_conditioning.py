@@ -9,7 +9,7 @@ from comfy.model_patcher import ModelPatcher
 from comfy.sd import CLIP
 import comfy.sd
 from comfy.hooks import HookGroup, HookKeyframeGroup, HookKeyframe
-import comfy_extras.nodes_hooks
+import comfy_extras.nodes.nodes_hooks
 import comfy.hooks
 import comfy.utils
 
