@@ -560,7 +560,7 @@ class MaskableLoraLoaderModelOnlyDEPR(MaskableLoraLoaderDEPR):
         return (model_lora, hooks)
 
 
-class MaskableSDModelLoaderDEPR(comfy_extras.nodes_hooks.CreateHookModelAsLora):
+class MaskableSDModelLoaderDEPR(comfy_extras.nodes.nodes_hooks.CreateHookModelAsLora):
     @classmethod
     def INPUT_TYPES(s):
         return {
