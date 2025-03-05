@@ -391,6 +391,25 @@ def outer_sample_wrapper(executor: WrapperExecutor, *args, **kwargs):
         params.full_length = latents.size(0)
         # reset global state
         ADGS.reset()
+    finally:
+        guider.model_options = orig_model_options
+        del noise
+        del latents
+        del cached_latents
+        del cached_noise
+        del orig_model_options
+        if hmref_attachment is not None:
+            hmref_attachment.cleanup()
+        del hmref_attachment
+        # reset global state
+        ADGS.reset()
+        # clean motion_models
+        helper.cleanup_motion_models()
+        # restore injected functions
+        function_injections.restore_functions(helper)
+        del function_injections
+        del helper
+
 class ContextRefInjector:
     def __init__(self):
         self.orig_can_concat_cond = None
@@ -561,26 +580,7 @@ def motion_sample_factory(orig_comfy_sample: Callable, is_custom: bool=False) ->
                         to_inject = injection_list[i]
                         latents = perform_image_injection(ADGS, helper.model.model, latents, to_inject)
         return latents
-    finally:
-        guider.model_options = orig_model_options
-        del noise
-        del latents
-        del cached_latents
-        del cached_noise
-        del orig_model_options
-        if hmref_attachment is not None:
-            hmref_attachment.cleanup()
-        del hmref_attachment
-        # reset global state
-        ADGS.reset()
-        # clean motion_models
-        helper.cleanup_motion_models()
-        # restore injected functions
-        function_injections.restore_functions(helper)
-        del function_injections
-        del helper
-
-
+        
 def evolved_sampling_function(model, x: Tensor, timestep: Tensor, uncond, cond, cond_scale, model_options: dict={}, seed=None):
     ADGS: AnimateDiffGlobalState = model_options["transformer_options"]["ADGS"]
     ADGS.initialize(model)
