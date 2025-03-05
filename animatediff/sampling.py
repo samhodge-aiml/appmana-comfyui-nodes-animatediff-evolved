@@ -391,65 +391,6 @@ def outer_sample_wrapper(executor: WrapperExecutor, *args, **kwargs):
         params.full_length = latents.size(0)
         # reset global state
         ADGS.reset()
-    finally:
-        guider.model_options = orig_model_options
-        del noise
-        del latents
-        del cached_latents
-        del cached_noise
-        del orig_model_options
-        if hmref_attachment is not None:
-            hmref_attachment.cleanup()
-        del hmref_attachment
-        # reset global state
-        ADGS.reset()
-        # clean motion_models
-        helper.cleanup_motion_models()
-        # restore injected functions
-        function_injections.restore_functions(helper)
-        del function_injections
-        del helper
-
-class ContextRefInjector:
-    def __init__(self):
-        self.orig_can_concat_cond = None
-
-    def inject(self):
-        self.orig_can_concat_cond = comfy.samplers.can_concat_cond
-        comfy.samplers.can_concat_cond = ContextRefInjector.can_concat_cond_contextref_factory(self.orig_can_concat_cond)
-
-    def restore(self):
-        if self.orig_can_concat_cond is not None:
-            comfy.samplers.can_concat_cond = self.orig_can_concat_cond
-
-    @staticmethod
-    def can_concat_cond_contextref_factory(orig_func: Callable):
-        def can_concat_cond_contextref_injection(c1, c2, *args, **kwargs):
-            #return orig_func(c1, c2, *args, **kwargs)
-            if c1 is c2:
-                return True
-            return False
-        return can_concat_cond_contextref_injection
-
-
-def motion_sample_factory(orig_comfy_sample: Callable, is_custom: bool=False) -> Callable:
-    def motion_sample(model: ModelPatcherAndInjector, noise: Tensor, *args, **kwargs):
-        # check if model is intended for injecting
-        if type(model) != ModelPatcherAndInjector:
-            return orig_comfy_sample(model, noise, *args, **kwargs)
-        # otherwise, injection time
-        latents = None
-        cached_latents = None
-        cached_noise = None
-        function_injections = FunctionInjectionHolder()
-        try:
-            # clone params from model
-            params = model.motion_injection_params.clone()
-            # get amount of latents passed in, and store in params
-            latents: Tensor = args[-1]
-            params.full_length = latents.size(0)
-            # reset global state
-            ADGS.reset()
 
         # apply custom noise, if needed
         disable_noise = math.isclose(noise.max(), 0.0)
@@ -580,7 +521,26 @@ def motion_sample_factory(orig_comfy_sample: Callable, is_custom: bool=False) ->
                         to_inject = injection_list[i]
                         latents = perform_image_injection(ADGS, helper.model.model, latents, to_inject)
         return latents
-        
+    finally:
+        guider.model_options = orig_model_options
+        del noise
+        del latents
+        del cached_latents
+        del cached_noise
+        del orig_model_options
+        if hmref_attachment is not None:
+            hmref_attachment.cleanup()
+        del hmref_attachment
+        # reset global state
+        ADGS.reset()
+        # clean motion_models
+        helper.cleanup_motion_models()
+        # restore injected functions
+        function_injections.restore_functions(helper)
+        del function_injections
+        del helper
+
+
 def evolved_sampling_function(model, x: Tensor, timestep: Tensor, uncond, cond, cond_scale, model_options: dict={}, seed=None):
     ADGS: AnimateDiffGlobalState = model_options["transformer_options"]["ADGS"]
     ADGS.initialize(model)
@@ -790,7 +750,7 @@ def sliding_calc_cond_batch(executor: Callable, model, conds: list[list[dict]], 
             cached_naive_conds = [torch.zeros_like(x_in) for _ in conds]
             #cached_naive_counts = [torch.zeros((x_in.shape[0], 1, 1, 1), device=x_in.device) for _ in conds]
             naivereuse_active = True
-        # perform calc_conds_batch per context window
+        # perform calc_conds_batch per context window 
         for ctx_idxs in context_windows:
             # allow processing to end between context window executions for faster Cancel
             comfy.model_management.throw_exception_if_processing_interrupted()
